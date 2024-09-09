@@ -24,15 +24,15 @@ genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
 def load_models():
     object_detector = pipeline("object-detection", model="hustvl/yolos-tiny")
     summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-    translator = pipeline("translation", model="Helsinki-NLP/opus-mt-en-hi", timeout=500)
+    # translator = pipeline("translation", model="facebook/mbart-large-50-many-to-many-mmt", timeout=500)
     qa_model = pipeline("question-answering", model="deepset/roberta-base-squad2")
     image_captioner = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
     image_processor = ViTImageProcessor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
     tokenizer = AutoTokenizer.from_pretrained("nlpconnect/vit-gpt2-image-captioning",timeout=500)
     
-    return object_detector, summarizer, translator, qa_model, image_captioner, image_processor, tokenizer
+    return object_detector, summarizer, qa_model, image_captioner, image_processor, tokenizer
 
-object_detector, summarizer, translator, qa_model, image_captioner, image_processor, tokenizer = load_models()
+object_detector, summarizer, qa_model, image_captioner, image_processor, tokenizer = load_models()
 
 # Gemini model configuration
 generation_config = {
@@ -59,9 +59,9 @@ def summarize_text(text):
     summary = summarizer(text, max_length=130, min_length=30, do_sample=False)
     return summary[0]['summary_text']
 
-def translate_to_hindi(text):
-    translation = translator(text, max_length=200)
-    return translation[0]['translation_text']
+# def translate_to_hindi(text):
+#     translation = translator(text, max_length=200, src_lang="eng", tgt_lang="hi")
+#     return translation[0]['translation_text']
 
 def answer_question(context, question):
     answer = qa_model(question=question, context=context)
@@ -80,8 +80,7 @@ st.title("Mushak AI - Your Ganesh Chaturthi Companion")
 # Sidebar for feature selection
 st.sidebar.title("Features")
 feature = st.sidebar.selectbox("Select a feature", 
-    ["Chat with Mushak", "Object Detection", "Story Summarization", 
-     "Hindi Translation", "Question Answering", "Image Captioning"])
+    ["Chat with Mushak", "Object Detection", "Story Summarization", "Question Answering", "Image Captioning"])
     
 if feature == "Chat with Mushak":
     st.header("Chat with Mushak about Ganesh Chaturthi")
@@ -149,13 +148,13 @@ elif feature == "Story Summarization":
             summary = summarize_text(story)
             st.write("Summary:", summary)
 
-elif feature == "Hindi Translation":
-    st.header("English to Hindi Translation")
-    text = st.text_area("Enter text to translate to Hindi:")
-    if st.button("Translate"):
-        if text:
-            hindi_text = translate_to_hindi(text)
-            st.write("Hindi Translation:", hindi_text)
+# elif feature == "Hindi Translation":
+#     st.header("English to Hindi Translation")
+#     text = st.text_area("Enter text to translate to Hindi:")
+#     if st.button("Translate"):
+#         if text:
+#             hindi_text = translate_to_hindi(text)
+#             st.write("Hindi Translation:", hindi_text)
 
 elif feature == "Question Answering":
     st.header("Question Answering about Ganesh Chaturthi")
