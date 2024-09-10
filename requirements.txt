@@ -4,3 +4,4 @@ transformers
 Pillow
 google-generativeai
 python-dotenv
+timm
