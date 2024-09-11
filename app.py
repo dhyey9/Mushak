@@ -4,6 +4,7 @@ from transformers import pipeline, AutoTokenizer, VisionEncoderDecoderModel, ViT
 from PIL import Image
 import io
 import google.generativeai as genai
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from dotenv import load_dotenv
 import os
 
@@ -16,15 +17,29 @@ st.set_page_config(
 # Load environment variables
 load_dotenv()
 
-# Configure the Gemini API
-genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
 
+genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+generation_config = {
+    "temperature": 0.7,
+    "top_p": 1,
+    "max_output_tokens": 2048,
+}
+
+model = genai.GenerativeModel(
+    model_name="tunedModels/rolespecificconversationslordganesha-7kh",
+    generation_config=generation_config
+)
+
+# Helper functions
+def get_gemini_response(prompt):
+    response = model.generate_content([prompt])
+    return response.text.strip()
 st.write("""
 This AI-powered Mushak that is designed to enhance your celebration of Ganesha Chaturthi by providing you with detailed information about Lord Ganesha and related festival traditions. 
 As an intelligent Assistant, I can provide you with these features:
 - **Information Retrieval (Fine Tuned on Gemini Model)**: Get specific details about Lord Ganesha, including his attributes, stories, and various forms, upon request.
 - **Festival Guide (Microsoft's MiniLM Model)**: Add information from the web and ask questions to enrich your knowledge base about Ganesha Chaturthi.
-- **Text Analysis (Built on Facebook's Bart base Model)**: Summarize passages about Ganesha and get answers based on the provided text content.
+- **Text Analysis (Built on Facebook's Bart Large CNN Model)**: Summarize passages about Ganesha and get answers based on the provided text content.
 - **Image Recognition (Built on Facebook's detr-resnet-50 Model)**: Upload images of Lord Ganesha to detect and identify objects, providing descriptions and relevant information.
 - **Image Captioning (Built on Microsoft's git-base-coco)**: Generate appropriate captions for images related to Ganesha Chaturthi.
 """)
@@ -47,11 +62,7 @@ def load_summarizer():
 #     )
 #     tokenizer = AutoTokenizer.from_pretrained("facebook/bart-base")
 #     return pipeline("summarization", model=model, tokenizer=tokenizer)
-    # config = AutoConfig.from_pretrained("facebook/bart-base")
-    # config.max_position_embeddings = 2048  # Increase this value
-    # model = AutoModelForSeq2SeqLM.from_pretrained("facebook/bart-base", config=config)
-    # return pipeline("summarization", model=model)
-    # return pipeline("summarization", model="facebook/bart-base")
+
     
 
 @st.cache_resource
@@ -69,22 +80,8 @@ def load_image_captioner():
 #     tokenizer = AutoTokenizer.from_pretrained("microsoft/git-base-coco")
 #     return model, processor, tokenizer
 
-# Gemini model configuration
-generation_config = {
-    "temperature": 0.7,
-    "top_p": 1,
-    "max_output_tokens": 2048,
-}
 
-model = genai.GenerativeModel(
-    model_name="tunedModels/rolespecificconversationslordganesha-7kh",
-    generation_config=generation_config
-)
 
-# Helper functions
-def get_gemini_response(prompt):
-    response = model.generate_content([prompt])
-    return response.text.strip()
 
 def detect_objects(image):
     object_detector = load_object_detector()
@@ -130,13 +127,11 @@ if feature == "Chat with Mushak":
     col1, col2 = st.columns([2, 1])
     with col1:
         user_input = st.text_input("Ask Mushak a question about Lord Ganesha:", key="user_input")
-
         if st.button("Generate", key="generate"):
             if user_input:
                 response = get_gemini_response(user_input)
-                if 'chat_history' not in st.session_state:
-                    st.session_state.chat_history = []
                 st.session_state.chat_history.append((user_input, response))
+                # st.write("Mushak's Response:", response)
                 st.markdown(f"🐭 **Mushak's Response:** {response}")
             else:
                 st.write("Please enter a prompt.")
@@ -145,8 +140,10 @@ if feature == "Chat with Mushak":
         if 'selected_chat' in st.session_state:
             i = st.session_state.selected_chat
             st.write(f"Selected Chat: {st.session_state.chat_history[i][0]}")
+            # st.write(f"Response: {st.session_state.chat_history[i][1]}")
             st.markdown(f"🐭 **Response:** {st.session_state.chat_history[i][1]}")
 
+       
     with col2:
         st.subheader("Suggested Prompts")
         prompts = [
@@ -164,10 +161,12 @@ if feature == "Chat with Mushak":
             st.write(f"Selected prompt: {selected_prompt}")
             if st.button("Use this prompt"):
                 response = get_gemini_response(selected_prompt)
-                if 'chat_history' not in st.session_state:
-                    st.session_state.chat_history = []
                 st.session_state.chat_history.append((selected_prompt, response))
+                # st.write("Mushak's Response:", response)
                 st.markdown(f"🐭 **Mushak's Response:** {response}")
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+   
 
 elif feature == "Story Summarization":
     st.header("Ganesha Story Summarization")
